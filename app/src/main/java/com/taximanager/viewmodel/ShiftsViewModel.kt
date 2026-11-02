@@ -77,9 +77,9 @@ class ShiftsViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { repo.endShift(e, f, d, n) }
     fun deleteShift(shift: Shift) = viewModelScope.launch { repo.deleteShift(shift) }
     
-    fun addOrder(fare: Double, tip: Double, isCash: Boolean) = viewModelScope.launch {
-        val active = uiState.value.activeShift ?: return@launch
-        repo.addOrder(active.id, fare, tip, isCash)
+    // ОБНОВЛЕНО: Теперь принимает shiftId, чтобы можно было добавлять заказы в завершенные смены
+    fun addOrder(shiftId: Int, fare: Double, tip: Double, isCash: Boolean) = viewModelScope.launch {
+        repo.addOrder(shiftId, fare, tip, isCash)
     }
 
     private fun isInFilter(timestamp: Long, filter: TimeFilter): Boolean {
