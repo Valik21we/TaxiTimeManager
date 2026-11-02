@@ -1,6 +1,7 @@
 package com.taximanager.ui.screens
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -38,7 +39,7 @@ import java.util.Locale
 fun ShiftsScreen(vm: ShiftsViewModel = viewModel()) {
     val state by vm.uiState.collectAsState()
     var showEndDialog by remember { mutableStateOf(false) }
-    var showAddOrderDialog by remember { mutableStateOf<Shift?>(null) } // Если null - диалог закрыт. Если смена - добавляем к ней
+    var showAddOrderDialog by remember { mutableStateOf<Shift?>(null) }
     var deleteTarget by remember { mutableStateOf<Shift?>(null) }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
@@ -70,7 +71,7 @@ fun ShiftsScreen(vm: ShiftsViewModel = viewModel()) {
                 shift = active, 
                 orders = state.activeOrders,
                 onEnd = { showEndDialog = true },
-                onAddOrder = { showAddOrderDialog = active } // Передаем текущую смену
+                onAddOrder = { showAddOrderDialog = active }
             )
             Spacer(Modifier.height(16.dp))
         } else {
@@ -99,7 +100,7 @@ fun ShiftsScreen(vm: ShiftsViewModel = viewModel()) {
                 items(state.shifts, key = { it.id }) { shift ->
                     ShiftRow(
                         shift = shift, 
-                        onClick = { showAddOrderDialog = shift }, // Клик по истории открывает добавление заказа
+                        onClick = { showAddOrderDialog = shift },
                         onLongClick = { if (!shift.isActive) deleteTarget = shift }
                     )
                 }
@@ -108,7 +109,6 @@ fun ShiftsScreen(vm: ShiftsViewModel = viewModel()) {
     }
 
     if (showEndDialog) {
-        // Считаем сумму заказов, чтобы подставить в поле "Выручка"
         val autoEarnings = state.activeOrders.sumOf { it.totalAmount }
         EndShiftDialog(
             defaultEarnings = autoEarnings,
@@ -119,7 +119,6 @@ fun ShiftsScreen(vm: ShiftsViewModel = viewModel()) {
         )
     }
 
-    // Окно добавления заказа (работает и для активной, и для закрытой смены)
     showAddOrderDialog?.let { targetShift ->
         AddOrderDialog(
             onDismiss = { showAddOrderDialog = null },
@@ -145,7 +144,6 @@ fun ShiftsScreen(vm: ShiftsViewModel = viewModel()) {
 private fun SummaryCard(state: ShiftsUiState) {
     Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
         Row(Modifier.padding(16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            // Используем формат "%.2f" для копеек
             StatItem("Доход", "${"%.2f".format(state.totalEarnings)} Br", Color(0xFF4CAF50))
             StatItem("Топливо", "${"%.2f".format(state.totalFuel)} Br", Color(0xFFF44336))
             StatItem("Чистыми", "${"%.2f".format(state.totalNet)} Br", MaterialTheme.colorScheme.primary)
@@ -210,11 +208,16 @@ private fun ActiveShiftCard(shift: Shift, orders: List<Order>, onEnd: () -> Unit
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 private fun ShiftRow(shift: Shift, onClick: () -> Unit, onLongClick: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick, onLongClick = onLongClick),
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
         shape = RoundedCornerShape(12.dp)
     ) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -251,7 +254,7 @@ private fun AddOrderDialog(onDismiss: () -> Unit, onConfirm: (Double, Double, Bo
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(fare, { fare = it },
                     label = { Text("Стоимость поездки, Br") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), // ИСПРАВЛЕНО: Decimal для копеек
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(), singleLine = true)
                 
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -264,7 +267,7 @@ private fun AddOrderDialog(onDismiss: () -> Unit, onConfirm: (Double, Double, Bo
                 if (isCash) {
                     OutlinedTextField(given, { given = it },
                         label = { Text("Сколько дали, Br") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), // ИСПРАВЛЕНО
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.fillMaxWidth(), singleLine = true)
                     
                     if (tip > 0) {
@@ -284,7 +287,6 @@ private fun AddOrderDialog(onDismiss: () -> Unit, onConfirm: (Double, Double, Bo
 
 @Composable
 private fun EndShiftDialog(defaultEarnings: Double, onDismiss: () -> Unit, onConfirm: (Double, Double, Double, String) -> Unit) {
-    // Автоматически подставляем сумму из заказов (если она есть)
     var earnings by remember { mutableStateOf(if (defaultEarnings > 0) "%.2f".format(defaultEarnings) else "") }
     var fuel by remember { mutableStateOf("") }
     var distance by remember { mutableStateOf("") }
@@ -298,15 +300,15 @@ private fun EndShiftDialog(defaultEarnings: Double, onDismiss: () -> Unit, onCon
                 Text("Выручка уже подсчитана по заказам, но ты можешь её изменить.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                 OutlinedTextField(earnings, { earnings = it },
                     label = { Text("Общая выручка, Br") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), // ИСПРАВЛЕНО
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(), singleLine = true)
                 OutlinedTextField(fuel, { fuel = it },
                     label = { Text("Топливо, Br") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), // ИСПРАВЛЕНО
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(), singleLine = true)
                 OutlinedTextField(distance, { distance = it },
                     label = { Text("Километраж, км") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), // ИСПРАВЛЕНО
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(), singleLine = true)
                 OutlinedTextField(note, { note = it }, label = { Text("Заметка") }, modifier = Modifier.fillMaxWidth())
             }
