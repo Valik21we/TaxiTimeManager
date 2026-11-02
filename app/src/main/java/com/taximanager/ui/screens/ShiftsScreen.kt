@@ -166,7 +166,12 @@ private fun ActiveShiftCard(shift: Shift, onEnd: () -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ShiftRow(shift: Shift, onClick: () -> Unit) {
-    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), onClick = onClick) {
+    // ИСПРАВЛЕНО ЗДЕСЬ: onClick теперь стоит первым
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp)
+    ) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(formatDate(shift.startTime), fontWeight = FontWeight.SemiBold)
