@@ -12,6 +12,10 @@ interface ShiftDao {
     @Query("SELECT * FROM shifts WHERE endTime IS NULL ORDER BY startTime DESC LIMIT 1")
     fun getActiveShift(): Flow<Shift?>
 
+    // Добавили метод для получения смены по ID (нужно для добавления заказов в историю)
+    @Query("SELECT * FROM shifts WHERE id = :id")
+    suspend fun getShiftById(id: Int): Shift?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertShift(shift: Shift): Long
 
