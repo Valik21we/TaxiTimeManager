@@ -8,12 +8,13 @@ data class Shift(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val startTime: Long,
     val endTime: Long? = null,
-    val earnings: Double = 0.0,
+    val earnings: Double = 0.0, // Только выручка от поездок
+    val tips: Double = 0.0,     // Отдельно чаевые
     val fuelCost: Double = 0.0,
     val distanceKm: Double = 0.0,
     val note: String = ""
 ) {
     val isActive: Boolean get() = endTime == null
     val durationMs: Long get() = (endTime ?: System.currentTimeMillis()) - startTime
-    val netIncome: Double get() = earnings - fuelCost
+    val netIncome: Double get() = earnings - fuelCost // Чистыми (без учета чаевых)
 }
