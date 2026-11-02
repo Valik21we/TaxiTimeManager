@@ -109,7 +109,8 @@ fun ShiftsScreen(vm: ShiftsViewModel = viewModel()) {
     }
 
     if (showEndDialog) {
-        val autoEarnings = state.activeOrders.sumOf { it.totalAmount }
+        // Автозаполнение: только стоимость поездок, БЕЗ чаевых
+        val autoEarnings = state.activeOrders.sumOf { it.fare }
         EndShiftDialog(
             defaultEarnings = autoEarnings,
             onDismiss = { showEndDialog = false },
@@ -143,10 +144,22 @@ fun ShiftsScreen(vm: ShiftsViewModel = viewModel()) {
 @Composable
 private fun SummaryCard(state: ShiftsUiState) {
     Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
-        Row(Modifier.padding(16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            StatItem("Доход", "${"%.2f".format(state.totalEarnings)} Br", Color(0xFF4CAF50))
-            StatItem("Топливо", "${"%.2f".format(state.totalFuel)} Br", Color(0xFFF44336))
-            StatItem("Чистыми", "${"%.2f".format(state.totalNet)} Br", MaterialTheme.colorScheme.primary)
+        Column(Modifier.padding(16.dp).fillMaxWidth()) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                StatItem("Доход", "${"%.2f".format(state.totalEarnings)} Br", Color(0xFF4CAF50))
+                StatItem("Топливо", "${"%.2f".format(state.totalFuel)} Br", Color(0xFFF44336))
+                StatItem("Чистыми", "${"%.2f".format(state.totalNet)} Br", MaterialTheme.colorScheme.primary)
+            }
+            
+            // Если есть чаевые, показываем их отдельной строкой
+            if (state.totalTips > 0) {
+                Spacer(Modifier.height(12.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f))
+                Spacer(Modifier.height(12.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                    StatItem("Чаевые (не входят в доход)", "${"%.2f".format(state.totalTips)} Br", Color(0xFFFFC107))
+                }
+            }
         }
     }
 }
@@ -172,8 +185,9 @@ private fun ActiveShiftCard(shift: Shift, orders: List<Order>, onEnd: () -> Unit
     val m = (elapsed / 60_000) % 60
     val s = (elapsed / 1000) % 60
     
-    val ordersTotal = orders.sumOf { it.totalAmount }
-    val ordersTips = orders.sumOf { it.tip }
+    // Считаем отдельно сумму поездок и сумму чаевых
+    val ordersFareTotal = orders.sumOf { it.fare }
+    val ordersTipsTotal = orders.sumOf { it.tip }
 
     Card(
         Modifier.fillMaxWidth(),
@@ -185,8 +199,15 @@ private fun ActiveShiftCard(shift: Shift, orders: List<Order>, onEnd: () -> Unit
             Text("%02d:%02d:%02d".format(h, m, s), fontSize = 42.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
             
             if (orders.isNotEmpty()) {
-                Text("Заказов: ${orders.size} | Сумма: ${"%.2f".format(ordersTotal)} Br | Чаевые: ${"%.2f".format(ordersTips)} Br",
-                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(vertical = 8.dp))
+                Text("Поездки: ${"%.2f".format(ordersFareTotal)} Br | Заказов: ${orders.size}",
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp))
+                
+                if (ordersTipsTotal > 0) {
+                    Text("Чаевые: +${"%.2f".format(ordersTipsTotal)} Br",
+                        style = MaterialTheme.typography.bodyMedium, color = Color(0xFFFFC107), fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
+                } else {
+                    Spacer(Modifier.height(8.dp))
+                }
             }
 
             Spacer(Modifier.height(12.dp))
@@ -231,6 +252,12 @@ private fun ShiftRow(shift: Shift, onClick: () -> Unit, onLongClick: () -> Unit)
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text("${"%.2f".format(shift.earnings)} Br", fontWeight = FontWeight.Bold, color = Color(0xFF4CAF50))
+                
+                // Показываем чаевые в истории, если они были
+                if (shift.tips > 0) {
+                    Text("+${"%.2f".format(shift.tips)} Br (чай)", style = MaterialTheme.typography.bodySmall, color = Color(0xFFFFC107), fontWeight = FontWeight.Bold)
+                }
+                
                 Text("-${"%.2f".format(shift.fuelCost)} Br", style = MaterialTheme.typography.bodySmall, color = Color(0xFFF44336))
             }
         }
@@ -271,7 +298,7 @@ private fun AddOrderDialog(onDismiss: () -> Unit, onConfirm: (Double, Double, Bo
                         modifier = Modifier.fillMaxWidth(), singleLine = true)
                     
                     if (tip > 0) {
-                        Text("Чаевые: ${"%.2f".format(tip)} Br", color = Color(0xFF4CAF50), fontWeight = FontWeight.Bold)
+                        Text("Чаевые: ${"%.2f".format(tip)} Br", color = Color(0xFFFFC107), fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -297,9 +324,9 @@ private fun EndShiftDialog(defaultEarnings: Double, onDismiss: () -> Unit, onCon
         title = { Text("Завершить смену") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Выручка уже подсчитана по заказам, но ты можешь её изменить.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                Text("Выручка подсчитана по поездкам (без чаевых).", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                 OutlinedTextField(earnings, { earnings = it },
-                    label = { Text("Общая выручка, Br") },
+                    label = { Text("Общая выручка (поездки), Br") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(), singleLine = true)
                 OutlinedTextField(fuel, { fuel = it },
