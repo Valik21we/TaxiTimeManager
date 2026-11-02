@@ -4,11 +4,13 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.taximanager.data.entity.Order
 import com.taximanager.data.entity.Shift
 
-@Database(entities = [Shift::class], version = 1, exportSchema = false)
+@Database(entities = [Shift::class, Order::class], version = 2, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun shiftDao(): ShiftDao
+    abstract fun orderDao(): OrderDao
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
@@ -18,7 +20,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "taxi_manager.db"
-                ).build().also { INSTANCE = it }
+                )
+                .fallbackToDestructiveMigration() // Очистит старую БД и создаст новую
+                .build().also { INSTANCE = it }
             }
     }
 }
