@@ -32,7 +32,13 @@ class ShiftsRepository(private val dao: ShiftDao, private val orderDao: OrderDao
 
     fun getOrdersForActiveShift(shiftId: Int): Flow<List<Order>> = orderDao.getOrdersForShift(shiftId)
     
+    // ОБНОВЛЕНО: Теперь при добавлении заказа сумма смены пересчитывается автоматически
     suspend fun addOrder(shiftId: Int, fare: Double, tip: Double, isCash: Boolean) {
         orderDao.insertOrder(Order(shiftId = shiftId, fare = fare, tip = tip, isCash = isCash))
+        
+        // Подтягиваем смену и обновляем её заработок
+        val shift = dao.getShiftById(shiftId) ?: return
+        val newEarnings = shift.earnings + fare + tip
+        dao.updateShift(shift.copy(earnings = newEarnings))
     }
 }
