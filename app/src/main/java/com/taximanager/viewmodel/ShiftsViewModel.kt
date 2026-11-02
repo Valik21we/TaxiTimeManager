@@ -20,6 +20,7 @@ data class ShiftsUiState(
     val activeShift: Shift? = null,
     val activeOrders: List<Order> = emptyList(),
     val totalEarnings: Double = 0.0,
+    val totalTips: Double = 0.0, // НОВОЕ ПОЛЕ
     val totalFuel: Double = 0.0,
     val totalNet: Double = 0.0,
     val totalHours: Double = 0.0,
@@ -47,8 +48,9 @@ class ShiftsViewModel(app: Application) : AndroidViewModel(app) {
             activeShift = active,
             activeOrders = orders,
             totalEarnings = filteredShifts.sumOf { it.earnings },
+            totalTips = filteredShifts.sumOf { it.tips }, // Считаем чаевые
             totalFuel = filteredShifts.sumOf { it.fuelCost },
-            totalNet = filteredShifts.sumOf { it.netIncome },
+            totalNet = filteredShifts.sumOf { it.netIncome }, // Чистыми без чаевых
             totalHours = filteredShifts.sumOf { it.durationMs / 3_600_000.0 },
             currentFilter = filter
         )
@@ -77,7 +79,6 @@ class ShiftsViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { repo.endShift(e, f, d, n) }
     fun deleteShift(shift: Shift) = viewModelScope.launch { repo.deleteShift(shift) }
     
-    // ОБНОВЛЕНО: Теперь принимает shiftId, чтобы можно было добавлять заказы в завершенные смены
     fun addOrder(shiftId: Int, fare: Double, tip: Double, isCash: Boolean) = viewModelScope.launch {
         repo.addOrder(shiftId, fare, tip, isCash)
     }
