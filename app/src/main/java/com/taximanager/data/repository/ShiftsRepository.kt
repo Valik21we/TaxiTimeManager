@@ -1,11 +1,13 @@
 package com.taximanager.data.repository
 
+import com.taximanager.data.db.OrderDao
 import com.taximanager.data.db.ShiftDao
+import com.taximanager.data.entity.Order
 import com.taximanager.data.entity.Shift
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 
-class ShiftsRepository(private val dao: ShiftDao) {
+class ShiftsRepository(private val dao: ShiftDao, private val orderDao: OrderDao) {
     val allShifts: Flow<List<Shift>> = dao.getAllShifts()
     val activeShift: Flow<Shift?> = dao.getActiveShift()
 
@@ -27,4 +29,10 @@ class ShiftsRepository(private val dao: ShiftDao) {
     }
 
     suspend fun deleteShift(shift: Shift) = dao.deleteShift(shift)
+
+    fun getOrdersForActiveShift(shiftId: Int): Flow<List<Order>> = orderDao.getOrdersForShift(shiftId)
+    
+    suspend fun addOrder(shiftId: Int, fare: Double, tip: Double, isCash: Boolean) {
+        orderDao.insertOrder(Order(shiftId = shiftId, fare = fare, tip = tip, isCash = isCash))
+    }
 }
